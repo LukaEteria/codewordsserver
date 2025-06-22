@@ -1,20 +1,36 @@
+// ✅ dependencies
 import express from "express";
-import { createServer } from "http"; // Render-ზე ვიყენებთ HTTP-ს, არა HTTPS-ს
+import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import words from "../src/worlds/sityva.js"; // შეცვალე საჭიროებისამებრ
+import mysql from "mysql2/promise";
+import words from "../src/worlds/sityva.js";
 
 const app = express();
 app.use(cors());
 
 const server = createServer(app);
-
 const io = new Server(server, {
   cors: {
-    origin: "*", // საჭიროებისამებრ შეგიძლია დაწერო "https://spywords.com.ge"
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
+
+// ✅ connect to MySQL
+let db;
+try {
+  db = await mysql.createConnection({
+    host: "spywords.com.ge",
+    user: "hs0003365_hs0003365",
+    password: "E0CSHGVu1{dk",
+    database: "hs0003365_spywords",
+  });
+  console.log("✅ MySQL connection established.");
+} catch (error) {
+  console.error("❌ MySQL connection failed:", error);
+  process.exit(1);
+}
 
 const rooms = {};
 
@@ -39,10 +55,20 @@ function sendRoomData(roomId) {
   if (room) io.to(roomId).emit("room-data", room);
 }
 
+// ✅ check and delete room if empty
+async function roomCheckAndDeleteIfEmpty(roomId) {
+  const room = rooms[roomId];
+  if (room && room.players.length === 0) {
+    console.log(`🧹 ოთახი ცარიელია. ვშლით ბაზიდან: ${roomId}`);
+    await db.query("DELETE FROM rooms WHERE id = ?", [roomId]);
+    delete rooms[roomId];
+  }
+}
+
 io.on("connection", (socket) => {
   console.log("🟢 ახალი კავშირი:", socket.id);
 
-  socket.on("create-room", ({ nickname }, callback) => {
+  socket.on("create-room", async ({ nickname }, callback) => {
     if (!nickname?.trim()) return;
     const roomId = Math.random().toString(36).substring(2, 8);
     const firstTurn = randomTeam();
@@ -63,26 +89,36 @@ io.on("connection", (socket) => {
       creatorId: socket.id,
     };
 
+    await db.query(
+      "INSERT INTO rooms (id, creator, created_at, last_active, active) VALUES (?, ?, NOW(), NOW(), true)",
+      [roomId, nickname]
+    );
+
     socket.join(roomId);
     callback(roomId);
     sendRoomData(roomId);
   });
 
-  socket.on("join-room", ({ roomId, nickname }, callback) => {
+  socket.on("join-room", async ({ roomId, nickname }, callback) => {
     if (!rooms[roomId] || !nickname?.trim()) return callback("Room not found or invalid");
     rooms[roomId].players.push({ id: socket.id, nickname, role: null, team: null });
+
+    await db.query("UPDATE rooms SET last_active = NOW(), active = true WHERE id = ?", [roomId]);
+
     socket.join(roomId);
     callback(null);
     sendRoomData(roomId);
   });
 
-  socket.on("rejoin-room", ({ roomId, nickname }, callback) => {
+  socket.on("rejoin-room", async ({ roomId, nickname }, callback) => {
     const room = rooms[roomId];
     if (!room) return callback("Room not found");
 
     if (!room.players.some(p => p.id === socket.id)) {
       room.players.push({ id: socket.id, nickname, role: null, team: null });
     }
+
+    await db.query("UPDATE rooms SET last_active = NOW(), active = true WHERE id = ?", [roomId]);
 
     socket.join(roomId);
     callback(null);
@@ -180,28 +216,12 @@ io.on("connection", (socket) => {
     sendRoomData(roomId);
   });
 
-  socket.on("new-game", ({ roomId }) => {
-    const room = rooms[roomId];
-    if (!room) return;
-    const firstTurn = randomTeam();
-    room.board = generateBoard(words, firstTurn);
-    room.turn = firstTurn;
-    room.clue = null;
-    room.clueTeam = null;
-    room.guessesLeft = 0;
-    room.winner = null;
-    room.scores = {
-      red: firstTurn === "red" ? 9 : 8,
-      blue: firstTurn === "blue" ? 9 : 8,
-    };
-    sendRoomData(roomId);
-  });
-
-  socket.on("disconnecting", () => {
+  socket.on("disconnecting", async () => {
     for (const roomId of socket.rooms) {
       if (rooms[roomId]) {
         rooms[roomId].players = rooms[roomId].players.filter(p => p.id !== socket.id);
         sendRoomData(roomId);
+        await roomCheckAndDeleteIfEmpty(roomId);
       }
     }
   });
