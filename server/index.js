@@ -1,32 +1,21 @@
 import express from "express";
-import fs from "fs";
-import { createServer } from "https";
+import { createServer } from "http"; // ✅ მხოლოდ HTTP Render-ზე
 import { Server } from "socket.io";
 import cors from "cors";
-import words from "../src/worlds/sityva.js"; // შეცვალე თუ გინდა ლოკაცია
+import words from "../src/worlds/sityva.js"; // შეცვალე თუ სხვაგან გაქვს
 
 const app = express();
 app.use(cors());
 
-// ✅ SSL სერტიფიკატები
-const sslOptions = {
-  key: fs.readFileSync("/etc/letsencrypt/live/spywords.com.ge/privkey.pem"),
-  cert: fs.readFileSync("/etc/letsencrypt/live/spywords.com.ge/fullchain.pem"),
-};
+const server = createServer(app);
 
-// ✅ HTTPS სერვერის შექმნა
-const server = createServer(sslOptions, app);
-
-// ✅ Socket.IO სერვერის კონფიგურაცია
 const io = new Server(server, {
   cors: {
-    origin: "https://spywords.com.ge",
+    origin: "*", // ან "https://spywords.com.ge" თუ გინდა ზუსტად
     methods: ["GET", "POST"],
-    credentials: true,
   },
 });
 
-// ✅ ოთახების სტრუქტურა
 const rooms = {};
 
 function randomTeam() {
@@ -88,15 +77,12 @@ io.on("connection", (socket) => {
     sendRoomData(roomId);
   });
 
-  // ✅ დაბრუნება ოთახში
   socket.on("rejoin-room", ({ roomId, nickname }, callback) => {
     const room = rooms[roomId];
     if (!room) return callback("Room not found");
-
     if (!room.players.some(p => p.id === socket.id)) {
       room.players.push({ id: socket.id, nickname, role: null, team: null });
     }
-
     socket.join(roomId);
     callback(null);
     sendRoomData(roomId);
@@ -222,8 +208,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// ✅ გაშვების პორტი
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`✅ HTTPS Socket.IO სერვერი გაშვებულია პორტზე ${PORT}`);
+  console.log(`✅ Socket.IO სერვერი გაშვებულია პორტზე ${PORT}`);
 });
