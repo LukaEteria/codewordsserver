@@ -226,7 +226,15 @@ io.on("connection", (socket) => {
     }
   });
 });
-
+app.get("/api/rooms", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM rooms ORDER BY created_at DESC LIMIT 10");
+    res.json(rows);
+  } catch (err) {
+    console.error("Rooms API error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
