@@ -1,8 +1,8 @@
 import express from "express";
-import { createServer } from "http"; // ✅ მხოლოდ HTTP Render-ზე
+import { createServer } from "http"; // Render-ზე ვიყენებთ HTTP-ს, არა HTTPS-ს
 import { Server } from "socket.io";
 import cors from "cors";
-import words from "../src/worlds/sityva.js"; // შეცვალე თუ სხვაგან გაქვს
+import words from "../src/worlds/sityva.js"; // შეცვალე საჭიროებისამებრ
 
 const app = express();
 app.use(cors());
@@ -11,7 +11,7 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*", // ან "https://spywords.com.ge" თუ გინდა ზუსტად
+    origin: "*", // საჭიროებისამებრ შეგიძლია დაწერო "https://spywords.com.ge"
     methods: ["GET", "POST"],
   },
 });
@@ -36,8 +36,7 @@ function generateBoard(wordList, firstTurn) {
 
 function sendRoomData(roomId) {
   const room = rooms[roomId];
-  if (!room) return;
-  io.to(roomId).emit("room-data", room);
+  if (room) io.to(roomId).emit("room-data", room);
 }
 
 io.on("connection", (socket) => {
@@ -80,9 +79,11 @@ io.on("connection", (socket) => {
   socket.on("rejoin-room", ({ roomId, nickname }, callback) => {
     const room = rooms[roomId];
     if (!room) return callback("Room not found");
+
     if (!room.players.some(p => p.id === socket.id)) {
       room.players.push({ id: socket.id, nickname, role: null, team: null });
     }
+
     socket.join(roomId);
     callback(null);
     sendRoomData(roomId);
@@ -93,9 +94,7 @@ io.on("connection", (socket) => {
     if (!room) return;
     const player = room.players.find(p => p.id === socket.id);
 
-    if (role === "spymaster") {
-      if (room.players.some(p => p.role === "spymaster" && p.team === team)) return;
-    }
+    if (role === "spymaster" && room.players.some(p => p.role === "spymaster" && p.team === team)) return;
 
     if (player) {
       player.role = role;
@@ -210,5 +209,5 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`✅ Socket.IO სერვერი გაშვებულია პორტზე ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
