@@ -20,18 +20,21 @@ const io = new Server(server, {
 
 // ✅ MySQL კავშირი
 let db;
-try {
-  db = await mysql.createConnection({
-    host: "sql12.freesqldatabase.com",
-    user: "sql12786439",
-    password: "NB9XukN3sz",
-    database: "sql12786439",
-    port: 3306,
-  });
-  console.log("✅ MySQL კავშირი წარმატებულია.");
-} catch (error) {
-  console.error("❌ MySQL კავშირი ჩავარდა:", error);
-  process.exit(1);
+
+async function initializeDB() {
+  try {
+    db = await mysql.createConnection({
+      host: "sql12.freesqldatabase.com",  // Database host
+      user: "sql12786439",  // Database user
+      password: "NB9XukN3sz",  // Database password
+      database: "sql12786439",  // Database name
+      port: 3306,  // Default MySQL port
+    });
+    console.log("✅ MySQL კავშირი წარმატებულია.");
+  } catch (error) {
+    console.error("❌ MySQL კავშირი ჩავარდა:", error);
+    process.exit(1); // stop server if DB connection fails
+  }
 }
 
 // 🔄 ოთახების მეხსიერება
@@ -72,19 +75,7 @@ async function roomCheckAndDeleteIfEmpty(roomId) {
 }
 
 // ✅ რეგისტრაცია
-
-// ✅ ავტორიზაცია
-app.post("/api/login", async (req, res) => {
-  const { nickname, password } = req.body;
-
-  if (!nickname || !password) {
-    return res.status(400).json({ error: "შეავსე ორივე ველი" });
-  }
-
-  try {
-    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
-    if (rows.length === 0) {
-      return res.status(400).json({ error: "მომხმარებელი არ მოიძებნა" });app.post("/api/register", async (req, res) => {
+app.post("/api/register", async (req, res) => {
   const { nickname, password, email } = req.body;
 
   if (!nickname || !password || !email) {
@@ -116,6 +107,18 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// ✅ ავტორიზაცია
+app.post("/api/login", async (req, res) => {
+  const { nickname, password } = req.body;
+
+  if (!nickname || !password) {
+    return res.status(400).json({ error: "შეავსე ორივე ველი" });
+  }
+
+  try {
+    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
+    if (rows.length === 0) {
+      return res.status(400).json({ error: "მომხმარებელი არ მოიძებნა" });
     }
 
     const user = rows[0];
