@@ -1,6 +1,7 @@
 {
   "name": "codewords-server",
-  "version": "1.0.0",
+   "react": "^18.0.0",
+  "react-dom": "^18.0.0",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
