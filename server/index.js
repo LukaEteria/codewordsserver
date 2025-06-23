@@ -4,6 +4,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import mysql from "mysql2/promise";
+import bcrypt from "bcrypt";
 import words from "../src/worlds/sityva.js";
 
 const app = express();
@@ -55,7 +56,6 @@ function sendRoomData(roomId) {
   if (room) io.to(roomId).emit("room-data", room);
 }
 
-// ✅ check and delete room if empty
 async function roomCheckAndDeleteIfEmpty(roomId) {
   const room = rooms[roomId];
   if (room && room.players.length === 0) {
@@ -67,6 +67,56 @@ async function roomCheckAndDeleteIfEmpty(roomId) {
 
 io.on("connection", (socket) => {
   console.log("🟢 ახალი კავშირი:", socket.id);
+
+  // ✅ რეგისტრაცია
+  socket.on("register", async ({ nickname, password, email }, callback) => {
+    if (!nickname || !password || !email) {
+      return callback({ success: false, message: "ყველა ველი აუცილებელია" });
+    }
+
+    try {
+      const [existing] = await db.query("SELECT * FROM users WHERE nickname = ? OR email = ?", [nickname, email]);
+      if (existing.length > 0) {
+        return callback({ success: false, message: "ნიკნეიმი ან იმეილი უკვე არსებობს" });
+      }
+
+      const password_hash = await bcrypt.hash(password, 10);
+      await db.query(
+        "INSERT INTO users (nickname, password_hash, email, created_at) VALUES (?, ?, ?, NOW())",
+        [nickname, password_hash, email]
+      );
+
+      callback({ success: true });
+    } catch (err) {
+      console.error("❌ რეგისტრაციის შეცდომა:", err);
+      callback({ success: false, message: "სერვერის შეცდომა" });
+    }
+  });
+
+  // ✅ ავტორიზაცია
+  socket.on("login", async ({ nickname, password }, callback) => {
+    if (!nickname || !password) {
+      return callback({ success: false, message: "შეავსე ორივე ველი" });
+    }
+
+    try {
+      const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
+      if (rows.length === 0) {
+        return callback({ success: false, message: "მომხმარებელი ვერ მოიძებნა" });
+      }
+
+      const user = rows[0];
+      const match = await bcrypt.compare(password, user.password_hash);
+      if (!match) {
+        return callback({ success: false, message: "არასწორი პაროლია" });
+      }
+
+      callback({ success: true, nickname: user.nickname });
+    } catch (err) {
+      console.error("❌ ავტორიზაციის შეცდომა:", err);
+      callback({ success: false, message: "სერვერის შეცდომა" });
+    }
+  });
 
   socket.on("create-room", async ({ nickname }, callback) => {
     if (!nickname?.trim()) return;
@@ -226,6 +276,8 @@ io.on("connection", (socket) => {
     }
   });
 });
+
+// ✅ Rooms API
 app.get("/api/rooms", async (req, res) => {
   try {
     const [rows] = await db.query("SELECT * FROM rooms ORDER BY created_at DESC LIMIT 10");
@@ -235,6 +287,7 @@ app.get("/api/rooms", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
