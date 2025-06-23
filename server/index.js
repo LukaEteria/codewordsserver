@@ -22,14 +22,11 @@ const io = new Server(server, {
 let db;
 try {
 const db = await mysql.createConnection({
-  host: "213.157.199.149",  // MySQL სერვერის IP
-  user: "hs0003365_hs0003365",
-  password: "Eteria.123",
-  database: "hs0003365_spywords",
-  port: 3306,  // 3306 პორტი
-  connectTimeout: 30000, // გაზრდილი timeout (30 წამი)
+  host: "sql12.freesqldatabase.com",
+  user: "sql12786439", // Database username
+  password: "your_password", // Database password
+  database: "sql12786439", // Database name
 });
-
   console.log("✅ MySQL კავშირი წარმატებულია.");
 } catch (error) {
   console.error("❌ MySQL კავშირი ჩავარდა:", error);
