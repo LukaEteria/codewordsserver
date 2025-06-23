@@ -9,7 +9,7 @@ import words from "../src/worlds/sityva.js";
 
 const app = express();
 app.use(cors());
-
+app.use(express.json());
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
@@ -69,29 +69,35 @@ io.on("connection", (socket) => {
   console.log("🟢 ახალი კავშირი:", socket.id);
 
   // ✅ რეგისტრაცია
-  socket.on("register", async ({ nickname, password, email }, callback) => {
-    if (!nickname || !password || !email) {
-      return callback({ success: false, message: "ყველა ველი აუცილებელია" });
+app.post("/api/register", async (req, res) => {
+  const { nickname, password, email } = req.body;
+
+  if (!nickname || !password || !email) {
+    return res.status(400).json({ error: "ყველა ველი აუცილებელია" });
+  }
+
+  try {
+    const [existing] = await db.query(
+      "SELECT id FROM users WHERE nickname = ? OR email = ?",
+      [nickname, email]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: "ნიკნეიმი ან იმეილი უკვე არსებობს" });
     }
 
-    try {
-      const [existing] = await db.query("SELECT * FROM users WHERE nickname = ? OR email = ?", [nickname, email]);
-      if (existing.length > 0) {
-        return callback({ success: false, message: "ნიკნეიმი ან იმეილი უკვე არსებობს" });
-      }
+    const password_hash = await bcrypt.hash(password, 10);
+    await db.query(
+      "INSERT INTO users (nickname, password_hash, email, created_at) VALUES (?, ?, ?, NOW())",
+      [nickname, password_hash, email]
+    );
 
-      const password_hash = await bcrypt.hash(password, 10);
-      await db.query(
-        "INSERT INTO users (nickname, password_hash, email, created_at) VALUES (?, ?, ?, NOW())",
-        [nickname, password_hash, email]
-      );
-
-      callback({ success: true });
-    } catch (err) {
-      console.error("❌ რეგისტრაციის შეცდომა:", err);
-      callback({ success: false, message: "სერვერის შეცდომა" });
-    }
-  });
+    return res.status(200).json({ message: "რეგისტრაცია წარმატებით შესრულდა" });
+  } catch (err) {
+    console.error("❌ რეგისტრაციის შეცდომა:", err);
+    return res.status(500).json({ error: "სერვერის შეცდომა" });
+  }
+});
 
   // ✅ ავტორიზაცია
   socket.on("login", async ({ nickname, password }, callback) => {
@@ -117,6 +123,34 @@ io.on("connection", (socket) => {
       callback({ success: false, message: "სერვერის შეცდომა" });
     }
   });
+
+  //ავტორიზაცია
+app.post("/api/login", async (req, res) => {
+  const { nickname, password } = req.body;
+
+  if (!nickname || !password) {
+    return res.status(400).json({ error: "შეავსე ორივე ველი" });
+  }
+
+  try {
+    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
+    if (rows.length === 0) {
+      return res.status(400).json({ error: "მომხმარებელი არ მოიძებნა" });
+    }
+
+    const user = rows[0];
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: "არასწორი პაროლია" });
+    }
+
+    return res.status(200).json({ message: "ავტორიზაცია წარმატებულია", nickname: user.nickname });
+  } catch (err) {
+    console.error("❌ Login error:", err);
+    return res.status(500).json({ error: "სერვერის შეცდომა" });
+  }
+});
+
 
   socket.on("create-room", async ({ nickname }, callback) => {
     if (!nickname?.trim()) return;
