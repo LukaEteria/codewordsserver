@@ -27,7 +27,9 @@ const db = await mysql.createConnection({
   password: "Eteria.123",
   database: "hs0003365_spywords",
   port: 3306,  // 3306 პორტი
+  connectTimeout: 30000, // გაზრდილი timeout (30 წამი)
 });
+
   console.log("✅ MySQL კავშირი წარმატებულია.");
 } catch (error) {
   console.error("❌ MySQL კავშირი ჩავარდა:", error);
