@@ -22,10 +22,11 @@ const io = new Server(server, {
 let db;
 try {
 db = await mysql.createConnection({
-  host: "213.157.199.149",  // თქვენი სერვერის IP
+  host: "213.157.199.149",  // IP თქვენი სერვერის
   user: "hs0003365_hs0003365",
   password: "Eteria.123",
   database: "hs0003365_spywords",
+  port: 3306,  // MySQL-ის სტანდარტული პორტი
 });
   console.log("✅ MySQL კავშირი წარმატებულია.");
 } catch (error) {
