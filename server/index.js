@@ -69,10 +69,13 @@ io.on("connection", (socket) => {
   console.log("🟢 ახალი კავშირი:", socket.id);
 
 // ✅ რეგისტრაცია
+// რეგისტრაცია — უნდა იყოს io.on("connection") გარეთ!
 app.post("/api/register", async (req, res) => {
   const { nickname, password, email } = req.body;
+  console.log("📥 რეგისტრაციის მოთხოვნა:", { nickname, email });
 
   if (!nickname || !password || !email) {
+    console.log("⚠️ ცარიელი ველები");
     return res.status(400).json({ error: "ყველა ველი აუცილებელია" });
   }
 
@@ -81,23 +84,27 @@ app.post("/api/register", async (req, res) => {
       "SELECT id FROM users WHERE nickname = ? OR email = ?",
       [nickname, email]
     );
+    console.log("🔍 მომხმარებელი არსებობს?", existing.length);
 
     if (existing.length > 0) {
+      console.log("⛔ ნიკნეიმი ან იმეილი უკვე არსებობს");
       return res.status(400).json({ error: "ნიკნეიმი ან იმეილი უკვე არსებობს" });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
-    await db.query(
+    const [result] = await db.query(
       "INSERT INTO users (nickname, password_hash, email, created_at) VALUES (?, ?, ?, NOW())",
       [nickname, password_hash, email]
     );
+    console.log("✅ მომხმარებელი დამატებულია ID:", result.insertId);
 
-    return res.status(200).json({ message: "რეგისტრაცია წარმატებულია" });
+    return res.status(200).json({ message: "რეგისტრაცია წარმატებით შესრულდა" });
   } catch (err) {
     console.error("❌ რეგისტრაციის შეცდომა:", err);
     return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
+
   // ✅ ავტორიზაცია (Socket.IO)
 socket.on("login", async ({ nickname, password }, callback) => {
   if (!nickname?.trim() || !password) {
