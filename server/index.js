@@ -302,7 +302,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-  console.log(`🚀 Server listening on port ${PORT}`);
+const port = process.env.PORT || 10000;  // გამოიყენეთ 10000 პორტი ან თუ არის სხვა, მაშინ process.env.PORT
+app.listen(port, () => {
+  console.log(`🚀 Server listening on port ${port}`);
 });
