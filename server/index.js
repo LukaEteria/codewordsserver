@@ -1,11 +1,10 @@
-// ✅ dependencies
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
 import mysql from "mysql2/promise";
 import bcrypt from "bcrypt";
-import words from "../src/worlds/sityva.js";
+import words from "../src/worlds/sityva.js"; // შეცვალე გზამკვლევი საჭიროებისამებრ
 
 const app = express();
 app.use(cors());
@@ -19,25 +18,62 @@ const io = new Server(server, {
   },
 });
 
-// ✅ connect to MySQL
+// ✅ MySQL კავშირი
 let db;
 try {
   db = await mysql.createConnection({
-    host: "spywords.com.ge", // ან ის რაც cPanel-ში წერია
+    host: "spywords.com.ge",
     user: "hs0003365_hs0003365",
-    password: "E0CSHGVu1{dk",
+    password: "Eteria.123",
     database: "hs0003365_spywords",
   });
-  console.log("✅ MySQL connection established.");
+  console.log("✅ MySQL კავშირი წარმატებულია.");
 } catch (error) {
-  console.error("❌ MySQL connection failed:", error);
+  console.error("❌ MySQL კავშირი ჩავარდა:", error);
   process.exit(1);
 }
 
-// ✅ EXPRESS ROUTES - ღია endpoint-ები
+// 🔄 ოთახების მეხსიერება
+const rooms = {};
 
+function randomTeam() {
+  return Math.random() < 0.5 ? "red" : "blue";
+}
+
+function generateBoard(wordList, firstTurn) {
+  const shuffledWords = [...wordList].sort(() => 0.5 - Math.random()).slice(0, 25);
+  const roles = [
+    "assassin",
+    ...Array(firstTurn === "red" ? 9 : 8).fill("red"),
+    ...Array(firstTurn === "blue" ? 9 : 8).fill("blue"),
+    ...Array(7).fill("neutral"),
+  ].sort(() => 0.5 - Math.random());
+
+  return shuffledWords.map((word, i) => ({
+    word,
+    role: roles[i],
+    revealed: false,
+  }));
+}
+
+function sendRoomData(roomId) {
+  const room = rooms[roomId];
+  if (room) io.to(roomId).emit("room-data", room);
+}
+
+async function roomCheckAndDeleteIfEmpty(roomId) {
+  const room = rooms[roomId];
+  if (room && room.players.length === 0) {
+    await db.query("DELETE FROM rooms WHERE id = ?", [roomId]);
+    delete rooms[roomId];
+    console.log(`🧹 ოთახი წაიშალა: ${roomId}`);
+  }
+}
+
+// ✅ რეგისტრაცია
 app.post("/api/register", async (req, res) => {
   const { nickname, password, email } = req.body;
+
   if (!nickname || !password || !email) {
     return res.status(400).json({ error: "ყველა ველი აუცილებელია" });
   }
@@ -58,13 +94,14 @@ app.post("/api/register", async (req, res) => {
       [nickname, password_hash, email]
     );
 
-    return res.status(200).json({ message: "რეგისტრაცია წარმატებით შესრულდა" });
+    return res.status(200).json({ message: "რეგისტრაცია წარმატებულია" });
   } catch (err) {
     console.error("❌ რეგისტრაციის შეცდომა:", err);
     return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
 
+// ✅ ავტორიზაცია
 app.post("/api/login", async (req, res) => {
   const { nickname, password } = req.body;
 
@@ -86,11 +123,12 @@ app.post("/api/login", async (req, res) => {
 
     return res.status(200).json({ message: "ავტორიზაცია წარმატებულია", nickname: user.nickname });
   } catch (err) {
-    console.error("❌ Login error:", err);
+    console.error("❌ ავტორიზაციის შეცდომა:", err);
     return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
 
+// ✅ Rooms API
 app.get("/api/rooms", async (req, res) => {
   try {
     const [rows] = await db.query("SELECT * FROM rooms ORDER BY created_at DESC LIMIT 10");
@@ -101,68 +139,30 @@ app.get("/api/rooms", async (req, res) => {
   }
 });
 
-// ✅ SOCKET.IO ლოგიკა
-const rooms = {};
-function randomTeam() {
-  return Math.random() < 0.5 ? "red" : "blue";
-}
-function generateBoard(wordList, firstTurn) {
-  const shuffledWords = [...wordList].sort(() => 0.5 - Math.random()).slice(0, 25);
-  const roles = [
-    "assassin",
-    ...Array(firstTurn === "red" ? 9 : 8).fill("red"),
-    ...Array(firstTurn === "blue" ? 9 : 8).fill("blue"),
-    ...Array(7).fill("neutral"),
-  ].sort(() => 0.5 - Math.random());
-
-  return shuffledWords.map((word, i) => ({ word, role: roles[i], revealed: false }));
-}
-function sendRoomData(roomId) {
-  const room = rooms[roomId];
-  if (room) io.to(roomId).emit("room-data", room);
-}
-async function roomCheckAndDeleteIfEmpty(roomId) {
-  const room = rooms[roomId];
-  if (room && room.players.length === 0) {
-    await db.query("DELETE FROM rooms WHERE id = ?", [roomId]);
-    delete rooms[roomId];
-  }
-}
-
+// ✅ Socket.IO Events
 io.on("connection", (socket) => {
-  console.log("🟢 ახალი კავშირი:", socket.id);
+  console.log("🔌 კავშირი:", socket.id);
 
   socket.on("login", async ({ nickname, password }, callback) => {
-    if (!nickname?.trim() || !password) {
-      return callback({ success: false, message: "შეავსე ორივე ველი" });
-    }
-
     try {
-      const [rows] = await db.query("SELECT id, nickname, password_hash FROM users WHERE nickname = ?", [nickname]);
-
+      const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
       if (rows.length === 0) {
         return callback({ success: false, message: "მომხმარებელი ვერ მოიძებნა" });
       }
 
-      const user = rows[0];
-      const passwordMatch = await bcrypt.compare(password, user.password_hash);
+      const match = await bcrypt.compare(password, rows[0].password_hash);
+      if (!match) return callback({ success: false, message: "არასწორი პაროლია" });
 
-      if (!passwordMatch) {
-        return callback({ success: false, message: "არასწორი პაროლია" });
-      }
-
-      callback({ success: true, nickname: user.nickname });
+      callback({ success: true, nickname: rows[0].nickname });
     } catch (err) {
-      console.error("❌ ავტორიზაციის შეცდომა:", err);
+      console.error(err);
       callback({ success: false, message: "სერვერის შეცდომა" });
     }
   });
 
   socket.on("create-room", async ({ nickname }, callback) => {
-    if (!nickname?.trim()) return;
     const roomId = Math.random().toString(36).substring(2, 8);
     const firstTurn = randomTeam();
-
     rooms[roomId] = {
       players: [{ id: socket.id, nickname, role: null, team: null }],
       board: generateBoard(words, firstTurn),
@@ -190,26 +190,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("join-room", async ({ roomId, nickname }, callback) => {
-    if (!rooms[roomId] || !nickname?.trim()) return callback("Room not found or invalid");
+    if (!rooms[roomId]) return callback("ოთახი არ მოიძებნა");
+
     rooms[roomId].players.push({ id: socket.id, nickname, role: null, team: null });
-
     await db.query("UPDATE rooms SET last_active = NOW(), active = true WHERE id = ?", [roomId]);
-
-    socket.join(roomId);
-    callback(null);
-    sendRoomData(roomId);
-  });
-
-  socket.on("rejoin-room", async ({ roomId, nickname }, callback) => {
-    const room = rooms[roomId];
-    if (!room) return callback("Room not found");
-
-    if (!room.players.some(p => p.id === socket.id)) {
-      room.players.push({ id: socket.id, nickname, role: null, team: null });
-    }
-
-    await db.query("UPDATE rooms SET last_active = NOW(), active = true WHERE id = ?", [roomId]);
-
     socket.join(roomId);
     callback(null);
     sendRoomData(roomId);
@@ -219,7 +203,6 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room) return;
     const player = room.players.find(p => p.id === socket.id);
-
     if (role === "spymaster" && room.players.some(p => p.role === "spymaster" && p.team === team)) return;
 
     if (player) {
@@ -317,8 +300,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// ✅ სერვერის გაშვება
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`🚀 Server listening on port ${PORT}`);
 });
