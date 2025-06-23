@@ -22,10 +22,11 @@ const io = new Server(server, {
 let db;
 try {
 const db = await mysql.createConnection({
-  host: "sql12.freesqldatabase.com",
-  user: "sql12786439", // Database username
-  password: "your_password", // Database password
-  database: "sql12786439", // Database name
+  host: "sql12.freesqldatabase.com",  // Database host
+  user: "sql12786439",  // Database user
+  password: "NB9XukN3sz",  // Database password
+  database: "sql12786439",  // Database name
+  port: 3306,  // Default MySQL port
 });
   console.log("✅ MySQL კავშირი წარმატებულია.");
 } catch (error) {
