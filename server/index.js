@@ -24,11 +24,11 @@ let db;
 async function initializeDB() {
   try {
     db = await mysql.createConnection({
-      host: "sql12.freesqldatabase.com",  // Database host
-      user: "sql12786439",  // Database user
-      password: "NB9XukN3sz",  // Database password
-      database: "sql12786439",  // Database name
-      port: 3306,  // Default MySQL port
+      host: "216.24.57.4", // MySQL სერვერის IP
+      user: "hs0003365_hs0003365",
+      password: "Eteria.123",
+      database: "hs0003365_spywords",
+      port: 3306, // Default MySQL port
     });
     console.log("✅ MySQL კავშირი წარმატებულია.");
   } catch (error) {
@@ -45,7 +45,9 @@ function randomTeam() {
 }
 
 function generateBoard(wordList, firstTurn) {
-  const shuffledWords = [...wordList].sort(() => 0.5 - Math.random()).slice(0, 25);
+  const shuffledWords = [...wordList]
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 25);
   const roles = [
     "assassin",
     ...Array(firstTurn === "red" ? 9 : 8).fill("red"),
@@ -116,7 +118,9 @@ app.post("/api/login", async (req, res) => {
   }
 
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
+    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [
+      nickname,
+    ]);
     if (rows.length === 0) {
       return res.status(400).json({ error: "მომხმარებელი არ მოიძებნა" });
     }
@@ -127,7 +131,9 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ error: "არასწორი პაროლია" });
     }
 
-    return res.status(200).json({ message: "ავტორიზაცია წარმატებულია", nickname: user.nickname });
+    return res
+      .status(200)
+      .json({ message: "ავტორიზაცია წარმატებულია", nickname: user.nickname });
   } catch (err) {
     console.error("❌ ავტორიზაციის შეცდომა:", err);
     return res.status(500).json({ error: "სერვერის შეცდომა" });
@@ -137,7 +143,9 @@ app.post("/api/login", async (req, res) => {
 // ✅ Rooms API
 app.get("/api/rooms", async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM rooms ORDER BY created_at DESC LIMIT 10");
+    const [rows] = await db.query(
+      "SELECT * FROM rooms ORDER BY created_at DESC LIMIT 10"
+    );
     res.json(rows);
   } catch (err) {
     console.error("Rooms API error:", err);
@@ -151,13 +159,19 @@ io.on("connection", (socket) => {
 
   socket.on("login", async ({ nickname, password }, callback) => {
     try {
-      const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
+      const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [
+        nickname,
+      ]);
       if (rows.length === 0) {
-        return callback({ success: false, message: "მომხმარებელი ვერ მოიძებნა" });
+        return callback({
+          success: false,
+          message: "მომხმარებელი ვერ მოიძებნა",
+        });
       }
 
       const match = await bcrypt.compare(password, rows[0].password_hash);
-      if (!match) return callback({ success: false, message: "არასწორი პაროლია" });
+      if (!match)
+        return callback({ success: false, message: "არასწორი პაროლია" });
 
       callback({ success: true, nickname: rows[0].nickname });
     } catch (err) {
@@ -198,8 +212,16 @@ io.on("connection", (socket) => {
   socket.on("join-room", async ({ roomId, nickname }, callback) => {
     if (!rooms[roomId]) return callback("ოთახი არ მოიძებნა");
 
-    rooms[roomId].players.push({ id: socket.id, nickname, role: null, team: null });
-    await db.query("UPDATE rooms SET last_active = NOW(), active = true WHERE id = ?", [roomId]);
+    rooms[roomId].players.push({
+      id: socket.id,
+      nickname,
+      role: null,
+      team: null,
+    });
+    await db.query(
+      "UPDATE rooms SET last_active = NOW(), active = true WHERE id = ?",
+      [roomId]
+    );
     socket.join(roomId);
     callback(null);
     sendRoomData(roomId);
@@ -208,8 +230,12 @@ io.on("connection", (socket) => {
   socket.on("set-role", ({ roomId, role, team }) => {
     const room = rooms[roomId];
     if (!room) return;
-    const player = room.players.find(p => p.id === socket.id);
-    if (role === "spymaster" && room.players.some(p => p.role === "spymaster" && p.team === team)) return;
+    const player = room.players.find((p) => p.id === socket.id);
+    if (
+      role === "spymaster" &&
+      room.players.some((p) => p.role === "spymaster" && p.team === team)
+    )
+      return;
 
     if (player) {
       player.role = role;
@@ -221,8 +247,9 @@ io.on("connection", (socket) => {
   socket.on("set-clue", ({ roomId, clue, number }) => {
     const room = rooms[roomId];
     if (!room || room.winner || room.clue) return;
-    const player = room.players.find(p => p.id === socket.id);
-    if (!player || player.role !== "spymaster" || player.team !== room.turn) return;
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player || player.role !== "spymaster" || player.team !== room.turn)
+      return;
 
     room.clue = { clue, number };
     room.clueTeam = player.team;
@@ -233,10 +260,11 @@ io.on("connection", (socket) => {
   socket.on("reveal-word", ({ roomId, word }) => {
     const room = rooms[roomId];
     if (!room || room.winner || room.guessesLeft <= 0) return;
-    const player = room.players.find(p => p.id === socket.id);
-    if (!player || player.role !== "operative" || player.team !== room.turn) return;
+    const player = room.players.find((p) => p.id === socket.id);
+    if (!player || player.role !== "operative" || player.team !== room.turn)
+      return;
 
-    const wordObj = room.board.find(w => w.word === word);
+    const wordObj = room.board.find((w) => w.word === word);
     if (!wordObj || wordObj.revealed) return;
     wordObj.revealed = true;
 
@@ -288,7 +316,7 @@ io.on("connection", (socket) => {
       blue: room.turn === "blue" ? 9 : 8,
     };
 
-    room.players.forEach(player => {
+    room.players.forEach((player) => {
       player.role = "operative";
     });
 
@@ -298,7 +326,9 @@ io.on("connection", (socket) => {
   socket.on("disconnecting", async () => {
     for (const roomId of socket.rooms) {
       if (rooms[roomId]) {
-        rooms[roomId].players = rooms[roomId].players.filter(p => p.id !== socket.id);
+        rooms[roomId].players = rooms[roomId].players.filter(
+          (p) => p.id !== socket.id
+        );
         sendRoomData(roomId);
         await roomCheckAndDeleteIfEmpty(roomId);
       }
@@ -310,3 +340,4 @@ const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`🚀 Server listening on port ${PORT}`);
 });
+
