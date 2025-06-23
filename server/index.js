@@ -22,7 +22,7 @@ const io = new Server(server, {
 let db;
 try {
   db = await mysql.createConnection({
-    host: "spywords.com.ge",
+    host: "213.157.199.149",
     user: "hs0003365_hs0003365",
     password: "Eteria.123",
     database: "hs0003365_spywords",
