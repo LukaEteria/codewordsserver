@@ -68,7 +68,7 @@ async function roomCheckAndDeleteIfEmpty(roomId) {
 io.on("connection", (socket) => {
   console.log("🟢 ახალი კავშირი:", socket.id);
 
-  // ✅ რეგისტრაცია
+// ✅ რეგისტრაცია
 app.post("/api/register", async (req, res) => {
   const { nickname, password, email } = req.body;
 
@@ -92,37 +92,38 @@ app.post("/api/register", async (req, res) => {
       [nickname, password_hash, email]
     );
 
-    return res.status(200).json({ message: "რეგისტრაცია წარმატებით შესრულდა" });
+    return res.status(200).json({ message: "რეგისტრაცია წარმატებულია" });
   } catch (err) {
     console.error("❌ რეგისტრაციის შეცდომა:", err);
     return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
+  // ✅ ავტორიზაცია (Socket.IO)
+socket.on("login", async ({ nickname, password }, callback) => {
+  if (!nickname?.trim() || !password) {
+    return callback({ success: false, message: "შეავსე ორივე ველი" });
+  }
 
-  // ✅ ავტორიზაცია
-  socket.on("login", async ({ nickname, password }, callback) => {
-    if (!nickname || !password) {
-      return callback({ success: false, message: "შეავსე ორივე ველი" });
+  try {
+    const [rows] = await db.query("SELECT id, nickname, password_hash FROM users WHERE nickname = ?", [nickname]);
+
+    if (rows.length === 0) {
+      return callback({ success: false, message: "მომხმარებელი ვერ მოიძებნა" });
     }
 
-    try {
-      const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
-      if (rows.length === 0) {
-        return callback({ success: false, message: "მომხმარებელი ვერ მოიძებნა" });
-      }
+    const user = rows[0];
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
 
-      const user = rows[0];
-      const match = await bcrypt.compare(password, user.password_hash);
-      if (!match) {
-        return callback({ success: false, message: "არასწორი პაროლია" });
-      }
-
-      callback({ success: true, nickname: user.nickname });
-    } catch (err) {
-      console.error("❌ ავტორიზაციის შეცდომა:", err);
-      callback({ success: false, message: "სერვერის შეცდომა" });
+    if (!passwordMatch) {
+      return callback({ success: false, message: "არასწორი პაროლია" });
     }
-  });
+
+    callback({ success: true, nickname: user.nickname });
+  } catch (err) {
+    console.error("❌ ავტორიზაციის შეცდომა:", err);
+    callback({ success: false, message: "სერვერის შეცდომა" });
+  }
+});
 
   //ავტორიზაცია
 app.post("/api/login", async (req, res) => {
