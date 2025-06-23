@@ -27,7 +27,7 @@ db = await mysql.createConnection({
   password: "Eteria.123",
   database: "hs0003365_spywords",
   port: 3306,
-  connectTimeout: 20000,  // 20 წამი timeout
+  connectTimeout: 30000,  // 20 წამი timeout
 });
   console.log("✅ MySQL კავშირი წარმატებულია.");
 } catch (error) {
@@ -302,7 +302,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const port = process.env.PORT || 10000;  // გამოიყენეთ 10000 პორტი ან თუ არის სხვა, მაშინ process.env.PORT
-app.listen(port, () => {
-  console.log(`🚀 Server listening on port ${port}`);
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => {
+  console.log(`🚀 Server listening on port ${PORT}`);
 });
