@@ -37,6 +37,8 @@ async function initializeDB() {
   }
 }
 
+// Call this function at the beginning of your application
+initializeDB();
 // 🔄 ოთახების მეხსიერება
 const rooms = {};
 
@@ -336,8 +338,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await initializeDB();
   console.log(`🚀 Server listening on port ${PORT}`);
 });
-
