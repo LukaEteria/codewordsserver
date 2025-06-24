@@ -27,7 +27,7 @@ async function initializeDB() {
     db = await mysql.createConnection({
       host: "216.24.57.4", // MySQL სერვერის IP
       user: "hs0003365_hs0003365",
-      password: "Eteria.123",
+      password: "Eteria.1234",
       database: "hs0003365_spywords",
       port: 3306, // Default MySQL port
     });
