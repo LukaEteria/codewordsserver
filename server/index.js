@@ -39,7 +39,7 @@ async function initializeDB() {
       password: "Eteria.1234",
       database: "hs0003365_spywords",
       port: 3306,
-      connectTimeout: 10000, // Timeout 10 seconds (10000ms)
+      connectTimeout: 30000, // Timeout 30 seconds (30000ms)
     });
 
     console.log("✅ MySQL კავშირი წარმატებულია.");
