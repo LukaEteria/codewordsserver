@@ -38,8 +38,7 @@ async function initializeDB() {
   }
 }
 
-// Call this function at the beginning of your application
-initializeDB();
+
 // 🔄 ოთახების მეხსიერება
 const rooms = {};
 
