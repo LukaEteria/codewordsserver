@@ -1,4 +1,4 @@
-import express from "express";
+ზimport express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
@@ -9,7 +9,7 @@ import words from "../src/worlds/sityva.js"; // შეცვალე გზა�
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+const PORT = process.env.PORT || 10000; 
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
