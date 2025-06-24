@@ -129,7 +129,6 @@ app.post("/api/register", async (req, res) => {
     return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
-
 app.post("/api/login", async (req, res) => {
   const { nickname, password } = req.body;
 
@@ -140,7 +139,9 @@ app.post("/api/login", async (req, res) => {
   try {
     console.log("Attempting to log in:", nickname);
 
-    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
+    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [
+      nickname,
+    ]);
 
     if (rows.length === 0) {
       return res.status(400).json({ error: "მომხმარებელი არ მოიძებნა" });
