@@ -4,19 +4,30 @@ import { Server } from "socket.io";
 import cors from "cors";
 import mysql from "mysql2/promise";
 import bcrypt from "bcrypt";
-import words from "../src/worlds/sityva.js"; // შეცვალე გზამკვლევი საჭიროებისამებრ
+import words from "../src/worlds/sityva.js"; // შეცვალე საჭიროებისამებრ
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "https://spywords.com.ge",  // მხოლოდ ამ დომენზე დაუშვებს კავშირებს
+  methods: ["GET", "POST"],
+  credentials: true,  // კუკის გამოყენებისათვის
+}));
 app.use(express.json());
+
 const PORT = process.env.PORT || 10000;
 const server = createServer(app);
+
 const io = new Server(server, {
   cors: {
-     origin: "https://spywords.com.ge",
+    origin: "https://spywords.com.ge",  // თქვენი აპლიკაციის URL
     methods: ["GET", "POST"],
+    credentials: true,  // იგივე, როგორც CORS-ზე
   },
-  transports: ['websocket', 'polling'],  // Polling fallback
+  transports: ['websocket', 'polling'], // Polling fallback
+});
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // ✅ MySQL კავშირი
