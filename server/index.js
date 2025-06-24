@@ -89,11 +89,11 @@ app.post("/api/register", async (req, res) => {
   try {
     console.log(`Trying to register user: ${nickname}`);
     
-    const [existing] = await db.query(
-      "SELECT id FROM users WHERE nickname = ? OR email = ?",
-      [nickname, email]
-    );
-
+   const [existing] = await db.query(
+  "SELECT id FROM users WHERE nickname = ? OR email = ?",
+  [nickname, email]
+);
+console.log('Query Results:', existing);  // log query results
     if (existing.length > 0) {
       return res.status(400).json({ error: "ნიკნეიმი ან იმეილი უკვე არსებობს" });
     }
