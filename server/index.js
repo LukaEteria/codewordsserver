@@ -139,8 +139,6 @@ app.post("/api/login", async (req, res) => {
   }
 
   try {
-    console.log("Attempting to log in:", nickname);
-
     const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [
       nickname,
     ]);
