@@ -6,11 +6,10 @@ import mysql from "mysql2/promise";
 import bcrypt from "bcrypt";
 import words from "../src/worlds/sityva.js"; // შეცვალე გზამკვლევი საჭიროებისამებრ
 
-
 const app = express();
 app.use(cors());
 app.use(express.json());
-const PORT = process.env.PORT || 10000; 
+const PORT = process.env.PORT || 10000;
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
@@ -23,16 +22,21 @@ const io = new Server(server, {
 let db;
 
 async function initializeDB() {
- 
+  try {
+    console.log("Trying to connect to the DB with the following parameters:", {
+      host: "sql12.freesqldatabase.com",
+      user: "sql12786439",
+      database: "sql12786439", // აღმოაჩინე ზედმეტი სივრცე
+      port: 3306,
+    });
 
     // კავშირის დამყარება
     db = await mysql.createConnection({
       host: "sql12.freesqldatabase.com",
       user: "sql12786439",
       password: "NB9XukN3sz",
-      database: "sql12786439	",
+      database: "sql12786439", // სწორად ვაფიქსირებ ამ კომპონენტს
       port: 3306,
-      
     });
 
     console.log("✅ MySQL კავშირი წარმატებულია.");
@@ -41,6 +45,7 @@ async function initializeDB() {
     process.exit(1); // stop server if DB connection fails
   }
 }
+
 // 🔄 ოთახების მეხსიერება
 const rooms = {};
 
@@ -90,12 +95,12 @@ app.post("/api/register", async (req, res) => {
 
   try {
     console.log(`Trying to register user: ${nickname}`);
-    
-   const [existing] = await db.query(
-  "SELECT id FROM users WHERE nickname = ? OR email = ?",
-  [nickname, email]
-);
-console.log('Query Results:', existing);  // log query results
+
+    const [existing] = await db.query(
+      "SELECT id FROM users WHERE nickname = ? OR email = ?",
+      [nickname, email]
+    );
+    console.log('Query Results:', existing);  // log query results
     if (existing.length > 0) {
       return res.status(400).json({ error: "ნიკნეიმი ან იმეილი უკვე არსებობს" });
     }
