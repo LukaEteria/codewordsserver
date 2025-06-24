@@ -27,9 +27,6 @@ const io = new Server(server, {
   transports: ['websocket', 'polling'], // Polling fallback
 });
 
-server.listen(PORT, () => {
-   console.log(🚀 Server listening on port ${PORT});
-});
 
 // ✅ MySQL კავშირი
 let db;
