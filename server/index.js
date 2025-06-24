@@ -118,7 +118,6 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-// ✅ ავტორიზაცია
 app.post("/api/login", async (req, res) => {
   const { nickname, password } = req.body;
 
@@ -127,15 +126,22 @@ app.post("/api/login", async (req, res) => {
   }
 
   try {
+    console.log("Attempting to log in:", nickname);  // Add logging here
+    
     const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [
       nickname,
     ]);
+    console.log("User found:", rows); // Log user query results
+
     if (rows.length === 0) {
       return res.status(400).json({ error: "მომხმარებელი არ მოიძებნა" });
     }
 
     const user = rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
+
+    console.log("Password match:", match); // Log if password is matched
+
     if (!match) {
       return res.status(401).json({ error: "არასწორი პაროლია" });
     }
@@ -147,6 +153,7 @@ app.post("/api/login", async (req, res) => {
     console.error("❌ ავტორიზაციის შეცდომა:", err);
     return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
+});
 });
 
 // ✅ Rooms API
