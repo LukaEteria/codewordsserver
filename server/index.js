@@ -24,21 +24,30 @@ let db;
 
 async function initializeDB() {
   try {
+    // ლოგირება, რომ ვამოწმებთ კავშირის პარამეტრებს
+    console.log("Trying to connect to the DB with the following parameters:", {
+      host: "216.24.57.4",
+      user: "hs0003365_hs0003365",
+      database: "hs0003365_spywords",
+      port: 3306,
+    });
+
+    // კავშირის დამყარება
     db = await mysql.createConnection({
-      host: "216.24.57.4", // MySQL სერვერის IP
+      host: "216.24.57.4",
       user: "hs0003365_hs0003365",
       password: "Eteria.1234",
       database: "hs0003365_spywords",
-      port: 3306, // Default MySQL port
+      port: 3306,
+      connectTimeout: 10000, // Timeout 10 seconds (10000ms)
     });
+
     console.log("✅ MySQL კავშირი წარმატებულია.");
   } catch (error) {
     console.error("❌ MySQL კავშირი ჩავარდა:", error);
     process.exit(1); // stop server if DB connection fails
   }
 }
-
-
 // 🔄 ოთახების მეხსიერება
 const rooms = {};
 
