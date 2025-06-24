@@ -18,9 +18,7 @@ const io = new Server(server, {
   },
   transports: ['websocket', 'polling'],  // Add polling as fallback
 });
-const socket = io('wss://codewordsserver.onrender.com', {
-  transports: ['websocket', 'polling'],  // fallback polling
-});
+
 // ✅ MySQL კავშირი
 let db;
 
