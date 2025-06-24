@@ -134,6 +134,7 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   const { nickname, password } = req.body;
 
+  // შეამოწმე, თუ მოცემულია ორივე ველი
   if (!nickname || !password) {
     return res.status(400).json({ error: "შეავსე ორივე ველი" });
   }
@@ -144,6 +145,7 @@ app.post("/api/login", async (req, res) => {
       nickname,
     ]);
 
+    // თუ მომხმარებელი ვერ მოიძებნა, დაბრუნე შეცდომა
     if (rows.length === 0) {
       return res.status(400).json({ error: "მომხმარებელი არ მოიძებნა" });
     }
@@ -153,18 +155,23 @@ app.post("/api/login", async (req, res) => {
     // პაროლის შედარება ჰეშირებულ პაროლთან
     const match = await bcrypt.compare(password, user.password_hash);
 
+    // თუ პაროლი არ ემთხვევა, უკან დაბრუნე შეცდომა
     if (!match) {
       return res.status(401).json({ error: "არასწორი პაროლია" });
     }
 
-    // წარმატებული ავტორიზაციის შემდეგ
+    // წარმატებული ავტორიზაციის შემდეგ, დააბრუნე პასუხი
     return res.status(200).json({
       message: "ავტორიზაცია წარმატებულია",
       nickname: user.nickname,
     });
   } catch (err) {
+    // შეცდომის აღნიშვნა და ლოგირება
     console.error("❌ ავტორიზაციის შეცდომა:", err);
-    return res.status(500).json({ error: "სერვერის შეცდომა" });
+    return res.status(500).json({
+      error: "სერვერის შეცდომა",
+      details: err.message || "შეცდომა სისტემაში",
+    });
   }
 });
 
