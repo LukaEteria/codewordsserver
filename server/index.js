@@ -27,7 +27,7 @@ const io = new Server(server, {
 });
 
 server.listen(PORT, () => {
-  console.log(Server running on port ${PORT});
+  console.log(`Server running on port ${PORT}`);
 });
 
 // ✅ MySQL კავშირი
@@ -93,7 +93,7 @@ async function roomCheckAndDeleteIfEmpty(roomId) {
   if (room && room.players.length === 0) {
     await db.query("DELETE FROM rooms WHERE id = ?", [roomId]);
     delete rooms[roomId];
-    console.log(🧹 ოთახი წაიშალა: ${roomId});
+    console.log(`🧹 ოთახი წაიშალა: ${roomId}`);
   }
 }
 
@@ -106,7 +106,7 @@ app.post("/api/register", async (req, res) => {
   }
 
   try {
-    console.log(Trying to register user: ${nickname});
+    console.log(`Trying to register user: ${nickname}`);
 
     const [existing] = await db.query(
       "SELECT id FROM users WHERE nickname = ? OR email = ?",
@@ -129,6 +129,8 @@ app.post("/api/register", async (req, res) => {
     return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
+
+// ✅ ავტორიზაცია
 app.post("/api/login", async (req, res) => {
   const { nickname, password } = req.body;
 
@@ -163,7 +165,6 @@ app.post("/api/login", async (req, res) => {
     return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
-
 
 // ✅ Rooms API
 app.get("/api/rooms", async (req, res) => {
@@ -252,112 +253,17 @@ io.on("connection", (socket) => {
     sendRoomData(roomId);
   });
 
-  socket.on("set-role", ({ roomId, role, team }) => {
-    const room = rooms[roomId];
-    if (!room) return;
-    const player = room.players.find((p) => p.id === socket.id);
-    if (
-      role === "spymaster" &&
-      room.players.some((p) => p.role === "spymaster" && p.team === team)
-    )
-      return;
-
-    if (player) {
-      player.role = role;
-      player.team = team;
-      sendRoomData(roomId);
-    }
-  });
-
-  socket.on("set-clue", ({ roomId, clue, number }) => {
-    const room = rooms[roomId];
-    if (!room || room.winner || room.clue) return;
-    const player = room.players.find((p) => p.id === socket.id);
-    if (!player || player.role !== "spymaster" || player.team !== room.turn)
-      return;
-
-    room.clue = { clue, number };
-    room.clueTeam = player.team;
-    room.guessesLeft = number + 1;
-    sendRoomData(roomId);
-  });
-
-  socket.on("reveal-word", ({ roomId, word }) => {
-    const room = rooms[roomId];
-    if (!room || room.winner || room.guessesLeft <= 0) return;
-    const player = room.players.find((p) => p.id === socket.id);
-    if (!player || player.role !== "operative" || player.team !== room.turn)
-      return;
-
-    const wordObj = room.board.find((w) => w.word === word);
-    if (!wordObj || wordObj.revealed) return;
-    wordObj.revealed = true;
-
-    if (wordObj.role === "assassin") {
-      room.winner = room.turn === "red" ? "blue" : "red";
-    } else if (wordObj.role === room.turn) {
-      room.scores[room.turn]--;
-      room.guessesLeft--;
-      if (room.scores[room.turn] === 0) {
-        room.winner = room.turn;
-      } else if (room.guessesLeft === 0) {
-        room.turn = room.turn === "red" ? "blue" : "red";
+  socket.on("disconnecting", async () => {
+    for (const roomId of socket.rooms) {
+      if (rooms[roomId]) {
+        rooms[roomId].players = rooms[roomId].players.filter(
+          (p) => p.id !== socket.id
+        );
+        sendRoomData(roomId);
+        await roomCheckAndDeleteIfEmpty(roomId);
       }
-    } else {
-      room.turn = room.turn === "red" ? "blue" : "red";
-      room.guessesLeft = 0;
     }
-
-    if (room.winner || room.guessesLeft === 0) {
-      room.clue = null;
-      room.clueTeam = null;
-    }
-
-    sendRoomData(roomId);
   });
-
-  socket.on("end-turn", ({ roomId }) => {
-    const room = rooms[roomId];
-    if (!room || room.winner) return;
-    room.turn = room.turn === "red" ? "blue" : "red";
-    room.clue = null;
-    room.clueTeam = null;
-    room.guessesLeft = 0;
-    sendRoomData(roomId);
-  });
-
-  socket.on("reset-game", ({ roomId }) => {
-    const room = rooms[roomId];
-    if (!room) return;
-
-    room.board = generateBoard(words, room.turn);
-    room.winner = null;
-    room.clue = null;
-    room.clueTeam = null;
-    room.guessesLeft = 0;
-    room.turn = room.turn === "red" ? "blue" : "red";
-    room.scores = {
-      red: room.turn === "red" ? 9 : 8,
-      blue: room.turn === "blue" ? 9 : 8,
-    };
-
-    room.players.forEach((player) => {
-      player.role = "operative";
-    });
-
-    sendRoomData(roomId);
-  });
-
-socket.on("disconnecting", async () => {
-  for (const roomId of socket.rooms) {
-    if (rooms[roomId]) {
-      rooms[roomId].players = rooms[roomId].players.filter(
-        (p) => p.id !== socket.id
-      );
-      sendRoomData(roomId);
-      await roomCheckAndDeleteIfEmpty(roomId);
-    }
-  }
 });
 
 app.listen(PORT, async () => {
