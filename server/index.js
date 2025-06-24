@@ -300,19 +300,20 @@ io.on("connection", (socket) => {
     sendRoomData(roomId);
   });
 
-socket.on("disconnecting", async () => {
-  for (const roomId of socket.rooms) {
-    if (rooms[roomId]) {
-      rooms[roomId].players = rooms[roomId].players.filter(
-        (p) => p.id !== socket.id
-      );
-      sendRoomData(roomId);
-      await roomCheckAndDeleteIfEmpty(roomId);
+  socket.on("disconnecting", async () => {
+    for (const roomId of socket.rooms) {
+      if (rooms[roomId]) {
+        rooms[roomId].players = rooms[roomId].players.filter(
+          (p) => p.id !== socket.id
+        );
+        sendRoomData(roomId);
+        await roomCheckAndDeleteIfEmpty(roomId);
+      }
     }
-  }
+  });
 });
 
 app.listen(PORT, async () => {
   await initializeDB();
-  console.log(`🚀 Server listening on port ${PORT}`);
+  console.log(🚀 Server listening on port ${PORT});
 });
