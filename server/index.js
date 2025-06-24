@@ -155,7 +155,7 @@ app.post("/api/login", async (req, res) => {
     return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
-});
+
 
 // ✅ Rooms API
 app.get("/api/rooms", async (req, res) => {
