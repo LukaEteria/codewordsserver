@@ -7,7 +7,6 @@ import bcrypt from "bcrypt";
 import words from "../src/worlds/sityva.js"; // შეცვალე საჭიროებისამებრ
 import jwt from 'jsonwebtoken';  // JSON Web Token
 
-
 const app = express();
 app.use(cors({
   origin: "https://spywords.com.ge",  // მხოლოდ ამ დომენზე დაუშვებს კავშირებს
@@ -59,6 +58,48 @@ async function initializeDB() {
     process.exit(1); // stop server if DB connection fails
   }
 }
+
+// ✅ Token ვალიდაცია
+app.post("/api/verify-token", async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  try {
+    // Token ვალიდაციის შემოწმება
+    const decoded = jwt.verify(token, 'your-secret-key'); // თქვენი საიდუმლო გასაღები
+    res.status(200).json({ message: "Token is valid", user: decoded });
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+});
+
+// Protected data route
+app.get("/api/protected-data", async (req, res) => {
+  const token = req.headers["authorization"]?.split(" ")[1];  // Get token from Authorization header
+
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, 'your-secret-key');  // Verify token
+    console.log("Decoded user:", decoded);
+
+    // If token is valid, query the database for protected data
+    const [rows] = await db.query("SELECT * FROM protected_table WHERE user_id = ?", [decoded.id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "No data found for the user" });
+    }
+
+    res.status(200).json(rows);  // Send the data back to the frontend
+  } catch (err) {
+    console.error("❌ Error verifying token:", err);
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+});
 
 // 🔄 ოთახების მეხსიერება
 const rooms = {};
