@@ -4,16 +4,14 @@ import { Server } from "socket.io";
 import cors from "cors";
 import mysql from "mysql2/promise";
 import bcrypt from "bcrypt";
+import words from "../src/worlds/sityva.js"; // შეცვალე საჭიროებისამებრ
 import jwt from 'jsonwebtoken';  // JSON Web Token
-import dotenv from 'dotenv';  // Load environment variables
-
-dotenv.config();  // Loads environment variables from .env file
 
 const app = express();
 app.use(cors({
-  origin: "https://spywords.com.ge",  // Only allow connections from this domain
+  origin: "https://spywords.com.ge",  // მხოლოდ ამ დომენზე დაუშვებს კავშირებს
   methods: ["GET", "POST"],
-  credentials: true,  // Enable cookie usage
+  credentials: true,  // კუკის გამოყენებისათვის
 }));
 app.use(express.json());
 
@@ -22,46 +20,46 @@ const server = createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://spywords.com.ge",  // Your application's URL
+    origin: "https://spywords.com.ge",  // თქვენი აპლიკაციის URL
     methods: ["GET", "POST"],
-    credentials: true,  // Same as CORS
+    credentials: true,  // იგივე, როგორც CORS-ზე
   },
-  transports: ['websocket', 'polling'],  // Fallback for Polling
+  transports: ['websocket', 'polling'], // Polling fallback
 });
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(Server running on port ${PORT});
 });
 
-// ✅ MySQL Connection Pooling
+// ✅ MySQL კავშირი
 let db;
 
 async function initializeDB() {
   try {
     console.log("Trying to connect to the DB with the following parameters:", {
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      database: process.env.DB_NAME,
-      port: process.env.DB_PORT,
+      host: "sql12.freesqldatabase.com",
+      user: "sql12786439",
+      database: "sql12786439",
+      port: 3306,
     });
 
-    // Create a connection pool
-    db = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      port: process.env.DB_PORT,
+    // კავშირის დამყარება
+    db = await mysql.createConnection({
+      host: "sql12.freesqldatabase.com",
+      user: "sql12786439",
+      password: "NB9XukN3sz",
+      database: "sql12786439",
+      port: 3306,
     });
 
-    console.log("✅ MySQL connection successful.");
+    console.log("✅ MySQL კავშირი წარმატებულია.");
   } catch (error) {
-    console.error("❌ MySQL connection failed:", error);
+    console.error("❌ MySQL კავშირი ჩავარდა:", error);
     process.exit(1); // stop server if DB connection fails
   }
 }
 
-// ✅ Token Validation
+// ✅ Token ვალიდაცია
 app.post("/api/verify-token", async (req, res) => {
   const { token } = req.body;
 
@@ -70,7 +68,8 @@ app.post("/api/verify-token", async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    // Token ვალიდაციის შემოწმება
+    const decoded = jwt.verify(token, 'your-secret-key'); // თქვენი საიდუმლო გასაღები
     res.status(200).json({ message: "Token is valid", user: decoded });
   } catch (err) {
     return res.status(401).json({ error: "Invalid or expired token" });
@@ -86,9 +85,10 @@ app.get("/api/protected-data", async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);  // Verify token
+    const decoded = jwt.verify(token, 'your-secret-key');  // Verify token
     console.log("Decoded user:", decoded);
 
+    // If token is valid, query the database for protected data
     const [rows] = await db.query("SELECT * FROM protected_table WHERE user_id = ?", [decoded.id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: "No data found for the user" });
@@ -101,7 +101,7 @@ app.get("/api/protected-data", async (req, res) => {
   }
 });
 
-// 🔄 Room Management
+// 🔄 ოთახების მეხსიერება
 const rooms = {};
 
 function randomTeam() {
@@ -136,27 +136,28 @@ async function roomCheckAndDeleteIfEmpty(roomId) {
   if (room && room.players.length === 0) {
     await db.query("DELETE FROM rooms WHERE id = ?", [roomId]);
     delete rooms[roomId];
-    console.log(`🧹 Room deleted: ${roomId}`);
+    console.log(🧹 ოთახი წაიშალა: ${roomId});
   }
 }
 
-// ✅ Registration
+// ✅ რეგისტრაცია
 app.post("/api/register", async (req, res) => {
   const { nickname, password, email } = req.body;
 
   if (!nickname || !password || !email) {
-    return res.status(400).json({ error: "All fields are required" });
+    return res.status(400).json({ error: "ყველა ველი აუცილებელია" });
   }
 
   try {
-    console.log(`Trying to register user: ${nickname}`);
+    console.log(Trying to register user: ${nickname});
 
     const [existing] = await db.query(
       "SELECT id FROM users WHERE nickname = ? OR email = ?",
       [nickname, email]
     );
+    console.log('Query Results:', existing);  // log query results
     if (existing.length > 0) {
-      return res.status(400).json({ error: "Nickname or email already exists" });
+      return res.status(400).json({ error: "ნიკნეიმი ან იმეილი უკვე არსებობს" });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -165,50 +166,50 @@ app.post("/api/register", async (req, res) => {
       [nickname, password_hash, email]
     );
 
-    return res.status(200).json({ message: "Registration successful" });
+    return res.status(200).json({ message: "რეგისტრაცია წარმატებულია" });
   } catch (err) {
-    console.error("❌ Registration error:", err);
-    return res.status(500).json({ error: "Server error" });
+    console.error("❌ რეგისტრაციის შეცდომა:", err);
+    return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
 
-// ✅ Login
+// ✅ ავტორიზაცია
 app.post("/api/login", async (req, res) => {
   const { nickname, password } = req.body;
 
   if (!nickname || !password) {
-    return res.status(400).json({ error: "Both fields are required" });
+    return res.status(400).json({ error: "შეავსე ორივე ველი" });
   }
 
   try {
     const [rows] = await db.query("SELECT id, nickname, password_hash FROM users WHERE nickname = ?", [nickname]);
 
     if (rows.length === 0) {
-      return res.status(400).json({ error: "User not found" });
+      return res.status(400).json({ error: "მომხმარებელი არ მოიძებნა" });
     }
 
     const user = rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
 
     if (!match) {
-      return res.status(401).json({ error: "Invalid password" });
+      return res.status(401).json({ error: "არასწორი პაროლია" });
     }
 
-    // JWT generation
+    // JWT-ის შექმნა
     const token = jwt.sign(
       { id: user.id, nickname: user.nickname },
-      process.env.JWT_SECRET_KEY,  // Use environment variable for secret key
-      { expiresIn: '1h' }  // Token expiration set to 1 hour
+      'your-secret-key', // საიდუმლო გასაღები (გაკეთე განსხვავებული!)
+      { expiresIn: '1h' }  // გამოგზავნილი token-ის ვადა 1 საათია
     );
 
     return res.status(200).json({
-      message: "Login successful",
+      message: "ავტორიზაცია წარმატებულია",
       nickname: user.nickname,
-      token,  // Return JWT token
+      token,  // დაბრუნდება JWT token-ი
     });
   } catch (err) {
-    console.error("❌ Login error:", err);
-    return res.status(500).json({ error: "Server error" });
+    console.error("❌ ავტორიზაციის შეცდომა:", err);
+    return res.status(500).json({ error: "სერვერის შეცდომა" });
   }
 });
 
@@ -227,7 +228,7 @@ app.get("/api/rooms", async (req, res) => {
 
 // ✅ Socket.IO Events
 io.on("connection", (socket) => {
-  console.log("🔌 Connected:", socket.id);
+  console.log("🔌 კავშირი:", socket.id);
 
   socket.on("login", async ({ nickname, password }, callback) => {
     try {
@@ -237,18 +238,18 @@ io.on("connection", (socket) => {
       if (rows.length === 0) {
         return callback({
           success: false,
-          message: "User not found",
+          message: "მომხმარებელი ვერ მოიძებნა",
         });
       }
 
       const match = await bcrypt.compare(password, rows[0].password_hash);
       if (!match)
-        return callback({ success: false, message: "Invalid password" });
+        return callback({ success: false, message: "არასწორი პაროლია" });
 
       callback({ success: true, nickname: rows[0].nickname });
     } catch (err) {
       console.error(err);
-      callback({ success: false, message: "Server error" });
+      callback({ success: false, message: "სერვერის შეცდომა" });
     }
   });
 
@@ -282,7 +283,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("join-room", async ({ roomId, nickname }, callback) => {
-    if (!rooms[roomId]) return callback("Room not found");
+    if (!rooms[roomId]) return callback("ოთახი არ მოიძებნა");
 
     rooms[roomId].players.push({
       id: socket.id,
@@ -314,5 +315,5 @@ io.on("connection", (socket) => {
 
 app.listen(PORT, async () => {
   await initializeDB();
-  console.log(`🚀 Server listening on port ${PORT}`);
+  console.log(🚀 Server listening on port ${PORT});
 });
