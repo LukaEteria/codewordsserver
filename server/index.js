@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 10000;
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+     origin: "https://spywords.com.ge",
     methods: ["GET", "POST"],
   },
   transports: ['websocket', 'polling'],  // Add polling as fallback
