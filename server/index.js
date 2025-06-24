@@ -139,7 +139,8 @@ app.post("/api/login", async (req, res) => {
   }
 
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [
+    // მომხმარებლის ძიება ბაზაში
+    const [rows] = await db.query("SELECT id, nickname, password_hash FROM users WHERE nickname = ?", [
       nickname,
     ]);
 
@@ -148,12 +149,15 @@ app.post("/api/login", async (req, res) => {
     }
 
     const user = rows[0];
+    
+    // პაროლის შედარება ჰეშირებულ პაროლთან
     const match = await bcrypt.compare(password, user.password_hash);
 
     if (!match) {
       return res.status(401).json({ error: "არასწორი პაროლია" });
     }
 
+    // წარმატებული ავტორიზაციის შემდეგ
     return res.status(200).json({
       message: "ავტორიზაცია წარმატებულია",
       nickname: user.nickname,
