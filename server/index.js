@@ -138,12 +138,9 @@ app.post("/api/login", async (req, res) => {
   }
 
   try {
-    console.log("Attempting to log in:", nickname);  // Add logging here
-    
-    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [
-      nickname,
-    ]);
-    console.log("User found:", rows); // Log user query results
+    console.log("Attempting to log in:", nickname);
+
+    const [rows] = await db.query("SELECT * FROM users WHERE nickname = ?", [nickname]);
 
     if (rows.length === 0) {
       return res.status(400).json({ error: "მომხმარებელი არ მოიძებნა" });
@@ -152,15 +149,14 @@ app.post("/api/login", async (req, res) => {
     const user = rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
 
-    console.log("Password match:", match); // Log if password is matched
-
     if (!match) {
       return res.status(401).json({ error: "არასწორი პაროლია" });
     }
 
-    return res
-      .status(200)
-      .json({ message: "ავტორიზაცია წარმატებულია", nickname: user.nickname });
+    return res.status(200).json({
+      message: "ავტორიზაცია წარმატებულია",
+      nickname: user.nickname,
+    });
   } catch (err) {
     console.error("❌ ავტორიზაციის შეცდომა:", err);
     return res.status(500).json({ error: "სერვერის შეცდომა" });
