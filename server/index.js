@@ -1,10 +1,10 @@
-ზimport express from "express";
-import { createServer } from "http";
-import { Server } from "socket.io";
-import cors from "cors";
-import mysql from "mysql2/promise";
-import bcrypt from "bcrypt";
-import words from "../src/worlds/sityva.js"; // შეცვალე გზამკვლევი საჭიროებისამებრ
+const express = require("express");
+const { createServer } = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
+const mysql = require("mysql2/promise");
+const bcrypt = require("bcrypt");
+const words = require("../src/worlds/sityva.js");რ
 
 const app = express();
 app.use(cors());
