@@ -16,7 +16,7 @@ const io = new Server(server, {
      origin: "https://spywords.com.ge",
     methods: ["GET", "POST"],
   },
-  transports: ['websocket', 'polling'],  // Add polling as fallback
+  transports: ['websocket', 'polling'],  // Polling fallback
 });
 
 // ✅ MySQL კავშირი
@@ -27,7 +27,7 @@ async function initializeDB() {
     console.log("Trying to connect to the DB with the following parameters:", {
       host: "sql12.freesqldatabase.com",
       user: "sql12786439",
-      database: "sql12786439", // აღმოაჩინე ზედმეტი სივრცე
+      database: "sql12786439",
       port: 3306,
     });
 
@@ -36,7 +36,7 @@ async function initializeDB() {
       host: "sql12.freesqldatabase.com",
       user: "sql12786439",
       password: "NB9XukN3sz",
-      database: "sql12786439", // სწორად ვაფიქსირებ ამ კომპონენტს
+      database: "sql12786439",
       port: 3306,
     });
 
