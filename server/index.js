@@ -23,23 +23,16 @@ const io = new Server(server, {
 let db;
 
 async function initializeDB() {
-  try {
-    // ლოგირება, რომ ვამოწმებთ კავშირის პარამეტრებს
-    console.log("Trying to connect to the DB with the following parameters:", {
-      host: "216.24.57.4",
-      user: "hs0003365_hs0003365",
-      database: "hs0003365_spywords",
-      port: 3306,
-    });
+ 
 
     // კავშირის დამყარება
     db = await mysql.createConnection({
-      host: "216.24.57.4",
-      user: "hs0003365_hs0003365",
-      password: "Eteria.1234",
-      database: "hs0003365_spywords",
+      host: "sql12.freesqldatabase.com",
+      user: "sql12786439",
+      password: "NB9XukN3sz",
+      database: "sql12786439	",
       port: 3306,
-      connectTimeout: 30000, // Timeout 30 seconds (30000ms)
+      
     });
 
     console.log("✅ MySQL კავშირი წარმატებულია.");
